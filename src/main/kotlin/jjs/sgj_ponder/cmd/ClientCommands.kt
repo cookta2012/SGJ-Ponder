@@ -13,7 +13,7 @@ import net.minecraft.resources.ResourceKey
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.server.level.ServerLevel
 import net.minecraft.world.level.Level
-import net.povstalec.sgjourney.common.stargate.StargateVariant
+import net.povstalec.sgjourney.common.sgjourney.StargateVariant
 
 
 object ClientCommands {
