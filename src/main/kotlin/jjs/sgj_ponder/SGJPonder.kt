@@ -4,17 +4,16 @@ import jjs.sgj_ponder.cmd.ClientCommands
 import jjs.sgj_ponder.ponderstuff.PonderSceneScaler
 import jjs.sgj_ponder.ponderstuff.SGJPonderPlugin
 import net.createmod.ponder.foundation.PonderIndex
-import net.minecraftforge.event.RegisterCommandsEvent
-import net.minecraftforge.eventbus.api.SubscribeEvent
-import net.minecraftforge.fml.common.Mod
-import net.minecraftforge.fml.common.Mod.EventBusSubscriber
-import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent
-import net.minecraftforge.fml.event.lifecycle.FMLDedicatedServerSetupEvent
+import net.neoforged.fml.common.Mod
+import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent
+import net.neoforged.fml.event.lifecycle.FMLDedicatedServerSetupEvent
+import net.neoforged.neoforge.common.NeoForge
+import net.neoforged.neoforge.event.RegisterCommandsEvent
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
-import thedarkcolour.kotlinforforge.forge.MOD_BUS
+import thedarkcolour.kotlinforforge.neoforge.forge.MOD_BUS
 
-/** Forge entry point and lifecycle coordinator for SGJ Ponder. */
+/** NeoForge entry point and lifecycle coordinator for SGJ Ponder. */
 @Mod(SGJPonder.MODID)
 object SGJPonder {
     /** Stable namespace shared by code, metadata, commands, and resources. */
@@ -28,9 +27,10 @@ object SGJPonder {
 
     init {
         LOGGER.info("Initializing SGJ Ponder")
-        // Client and dedicated-server setup events are delivered on the mod event bus.
+        // Lifecycle events use the mod bus; commands belong on NeoForge's game bus.
         MOD_BUS.addListener(::onClientSetup)
         MOD_BUS.addListener(::onServerSetup)
+        NeoForge.EVENT_BUS.addListener(::registerCommands)
     }
 
     /** Installs client-only Ponder integration after mod construction has completed. */
@@ -45,19 +45,13 @@ object SGJPonder {
         }
     }
 
-    /** Confirms dedicated-server setup without touching the client-only scaler. */
+    /** Confirms dedicated-server setup without touching client or Ponder classes. */
     private fun onServerSetup(event: FMLDedicatedServerSetupEvent) {
         LOGGER.info("Initializing SGJ Ponder server support")
     }
-}
 
-/** Forge game-bus subscriber for registrations that are not mod lifecycle events. */
-@EventBusSubscriber(modid = SGJPonder.MODID, bus = EventBusSubscriber.Bus.FORGE)
-object ModEventListener {
-    /** Adds the diagnostic Stargate-variant command to the active dispatcher. */
-    @JvmStatic
-    @SubscribeEvent
-    fun registerCommands(event: RegisterCommandsEvent) {
+    /** Adds the diagnostic Stargate-variant command to the active command dispatcher. */
+    private fun registerCommands(event: RegisterCommandsEvent) {
         ClientCommands.register(event.dispatcher)
     }
 }

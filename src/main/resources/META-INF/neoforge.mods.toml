@@ -1,5 +1,5 @@
 modLoader="kotlinforforge"
-loaderVersion="[4.11,)"
+loaderVersion="${loader_version_range}"
 license="${mod_license}"
 
 [[mods]]
@@ -8,33 +8,38 @@ version="${mod_version}"
 displayName="${mod_name}"
 authors="${mod_authors}"
 description='''${mod_description}'''
+
 [[dependencies.${mod_id}]]
-    modId="forge"
-    mandatory=true
-    versionRange="${forge_version_range}"
+    modId="neoforge"
+    type="required"
+    versionRange="${neo_version_range}"
     ordering="NONE"
     side="BOTH"
+
 [[dependencies.${mod_id}]]
     modId="minecraft"
-    mandatory=true
+    type="required"
     versionRange="${minecraft_version_range}"
     ordering="NONE"
     side="BOTH"
+
 [[dependencies.${mod_id}]]
     modId="sgjourney"
-    mandatory=true
+    type="required"
     versionRange="${sgjourney_version_range}"
     ordering="AFTER"
     side="BOTH"
+
 [[dependencies.${mod_id}]]
     modId="create"
-    mandatory=true
-    versionRange="${create_forge_version_range}"
+    type="required"
+    versionRange="${create_version_range}"
     ordering="AFTER"
     side="BOTH"
+
 [[dependencies.${mod_id}]]
     modId="ponder"
-    mandatory=true
+    type="required"
     versionRange="${ponder_version_range}"
     ordering="AFTER"
     side="BOTH"

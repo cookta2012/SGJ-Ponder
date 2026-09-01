@@ -4,16 +4,18 @@ import jjs.sgj_ponder.SGJPonder
 import net.createmod.ponder.api.registration.PonderPlugin
 import net.createmod.ponder.api.registration.PonderSceneRegistrationHelper
 import net.createmod.ponder.api.registration.PonderTagRegistrationHelper
+import net.minecraft.core.registries.BuiltInRegistries
 import net.minecraft.resources.ResourceLocation
-import net.minecraftforge.registries.ForgeRegistries
 
 /** Connects SGJ Ponder's Kotlin storyboards and tag to standalone Ponder. */
 object SGJPonderPlugin : PonderPlugin {
     /** Mandatory SGJourney item used as the Ponder entry and tag icon. */
-    val VARIANT_CRYSTAL_ITEM = ResourceLocation("sgjourney", "stargate_variant_crystal")
+    val VARIANT_CRYSTAL_ITEM: ResourceLocation =
+        ResourceLocation.fromNamespaceAndPath("sgjourney", "stargate_variant_crystal")
 
     /** Stable Ponder tag containing the variant-crystal tutorial entry. */
-    val VARIANT_CRYSTAL_TAG = ResourceLocation(SGJPonder.MODID, "var_crystal")
+    val VARIANT_CRYSTAL_TAG: ResourceLocation =
+        ResourceLocation.fromNamespaceAndPath(SGJPonder.MODID, "var_crystal")
 
     /** Supplies the namespace Ponder uses for this plugin's registrations. */
     override fun getModId(): String = SGJPonder.MODID
@@ -26,11 +28,12 @@ object SGJPonderPlugin : PonderPlugin {
     /** Builds the index tag and fails clearly when SGJourney's required item is absent. */
     override fun registerTags(helper: PonderTagRegistrationHelper<ResourceLocation>) {
         // Metadata already requires SGJourney; this validates the exact API item we integrate.
-        val iconItem = ForgeRegistries.ITEMS.getValue(VARIANT_CRYSTAL_ITEM)
-            ?: throw IllegalStateException(
+        val iconItem = BuiltInRegistries.ITEM.getOptional(VARIANT_CRYSTAL_ITEM).orElseThrow {
+            IllegalStateException(
                 "Required SGJourney item $VARIANT_CRYSTAL_ITEM is missing; " +
                     "the installed SGJourney version is incompatible or incomplete",
             )
+        }
 
         helper.registerTag(VARIANT_CRYSTAL_TAG)
             .title("Stargate Variant Crystal")

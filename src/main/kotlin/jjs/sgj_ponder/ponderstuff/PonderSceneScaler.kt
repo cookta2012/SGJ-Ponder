@@ -5,8 +5,8 @@ import kotlin.math.floor
 import net.createmod.ponder.foundation.PonderScene
 import net.createmod.ponder.foundation.ui.PonderUI
 import net.minecraft.client.Minecraft
-import net.minecraftforge.common.MinecraftForge
-import net.minecraftforge.event.TickEvent
+import net.neoforged.neoforge.client.event.ClientTickEvent
+import net.neoforged.neoforge.common.NeoForge
 
 /**
  * Keeps every SGJ Ponder storyboard framed consistently during live window resizing.
@@ -71,13 +71,10 @@ object PonderSceneScaler {
         if (registered) return
 
         registered = true
-        MinecraftForge.EVENT_BUS.addListener(::onClientTick)
+        NeoForge.EVENT_BUS.addListener(::onClientTick)
     }
 
-    /** Updates after each client tick so the scene state is stable before it is measured. */
-    private fun onClientTick(event: TickEvent.ClientTickEvent) {
-        if (event.phase != TickEvent.Phase.END) return
-
+    private fun onClientTick(event: ClientTickEvent.Post) {
         val minecraft = Minecraft.getInstance()
         val ponder = minecraft.screen as? PonderUI ?: run {
             clearActiveScene()
@@ -106,7 +103,7 @@ object PonderSceneScaler {
         }
 
         if (sceneChanged) {
-            // Apply immediately so the storyboard's first tick is already fitted.
+            // Apply immediately so the storyboard's first rendered frame is already fitted.
             applyScale(scene, targetScale)
             return
         }
@@ -173,7 +170,6 @@ object PonderSceneScaler {
         val widthSlope: Float,
         val heightSlope: Float,
     ) {
-        /** Evaluates the profile against GUI-scaled, rather than physical, dimensions. */
         fun evaluate(width: Int, height: Int): Float {
             return intercept + widthSlope * width + heightSlope * height
         }

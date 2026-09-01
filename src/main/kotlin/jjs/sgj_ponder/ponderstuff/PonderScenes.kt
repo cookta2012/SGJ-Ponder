@@ -18,6 +18,7 @@ import net.minecraft.network.chat.Component
 import net.minecraft.resources.ResourceLocation
 import net.minecraft.world.level.block.Block
 import net.minecraft.world.level.block.entity.BlockEntity
+import net.povstalec.sgjourney.common.block_entities.stargate.AbstractStargateEntity
 import net.povstalec.sgjourney.common.block_entities.stargate.ClassicStargateEntity
 import net.povstalec.sgjourney.common.block_entities.stargate.MilkyWayStargateEntity
 import net.povstalec.sgjourney.common.block_entities.stargate.PegasusStargateEntity
@@ -26,11 +27,17 @@ import net.povstalec.sgjourney.common.block_entities.stargate.UniverseStargateEn
 import net.povstalec.sgjourney.common.init.BlockInit
 import net.povstalec.sgjourney.common.sgjourney.StargateVariant
 
-/** Defines the six SGJourney variant-crystal storyboards and their shared scene helpers. */
+/** Defines and registers the six variant-crystal Ponder storyboards. */
 object PonderScenes {
-    /** Stable scene paths used both for registration and runtime scaler ownership checks. */
-    private val SCENE_IDS = setOf(
-        "var_crystal",
+    // Shared presentation values keep all gate families aligned to the same structure.
+    private val DEMO_ADDRESS = intArrayOf(1, 2, 3, 4, 5, 6)
+    private const val INTRO_SCENE_SCALE = 0.78f
+    private const val INTRO_SCENE_OFFSET_Y = -2.1f
+    private const val DISPLAY_SCENE_SCALE = 0.62f
+    private const val DISPLAY_SCENE_OFFSET_Y = -3.2f
+    private const val DISPLAY_SCENE_ROTATION_Y = 15.0f
+
+    private val DISPLAY_SCENE_IDS = setOf(
         "var_mw_display",
         "var_pegasus_display",
         "var_universe_display",
@@ -38,17 +45,10 @@ object PonderScenes {
         "var_classic_display",
     )
 
-    /** Demonstration address written to each displayed gate variant. */
-    private val DEMO_ADDRESS = intArrayOf(1, 2, 3, 4, 5, 6)
-
-    // Authored transforms provide safe defaults before the runtime scaler's first client tick.
-    private const val INTRO_SCENE_SCALE = 0.78f
-    private const val INTRO_SCENE_OFFSET_Y = -2.1f
-    private const val DISPLAY_SCENE_SCALE = 0.62f
-    private const val DISPLAY_SCENE_OFFSET_Y = -3.2f
-    private const val DISPLAY_SCENE_ROTATION_Y = 15.0f
-
-    /** Milky Way block/entity details and the NBT required for its variant transitions. */
+    /*
+     * Gate descriptors isolate family-specific blocks, entities, and NBT from the common
+     * display storyboard. Defaults prepare the base gate; variant writers apply registry data.
+     */
     private val MILKY_WAY = GateType(
         StargateVariant.MILKY_WAY_STARGATE,
         "var_mw_display",
@@ -56,17 +56,14 @@ object PonderScenes {
         Supplier { BlockInit.MILKY_WAY_STARGATE.get() },
         MilkyWayStargateEntity::class.java,
         Consumer { nbt ->
-            nbt.putString("Symbols", "sgjourney:galaxy_milky_way")
-            nbt.putString("PointOfOrigin", "sgjourney:tauri")
+            putSymbols(nbt, "sgjourney:galaxy_milky_way", "sgjourney:tauri")
         },
         BiConsumer { nbt, variant ->
-            nbt.putString("Symbols", "sgjourney:terra")
-            nbt.putString("PointOfOrigin", "sgjourney:terra")
+            putSymbols(nbt, "sgjourney:terra", "sgjourney:terra")
             putVariantAddress(nbt, variant)
         },
     )
 
-    /** Pegasus block/entity details, including its fixed-symbol demonstration mode. */
     private val PEGASUS = GateType(
         StargateVariant.PEGASUS_STARGATE,
         "var_pegasus_display",
@@ -74,19 +71,16 @@ object PonderScenes {
         Supplier { BlockInit.PEGASUS_STARGATE.get() },
         PegasusStargateEntity::class.java,
         Consumer { nbt ->
-            nbt.putString("Symbols", "sgjourney:galaxy_milky_way")
-            nbt.putString("PointOfOrigin", "sgjourney:tauri")
-            nbt.putBoolean("DynamicSymbols", false)
+            putSymbols(nbt, "sgjourney:galaxy_milky_way", "sgjourney:tauri")
+            putDynamicSymbols(nbt, false)
         },
         BiConsumer { nbt, variant ->
-            nbt.putString("Symbols", "sgjourney:terra")
-            nbt.putString("PointOfOrigin", "sgjourney:terra")
-            nbt.putBoolean("DynamicSymbols", false)
+            putSymbols(nbt, "sgjourney:terra", "sgjourney:terra")
+            putDynamicSymbols(nbt, false)
             putVariantAddress(nbt, variant)
         },
     )
 
-    /** Universe block/entity details and its universal symbol configuration. */
     private val UNIVERSE = GateType(
         StargateVariant.UNIVERSE_STARGATE,
         "var_universe_display",
@@ -94,17 +88,14 @@ object PonderScenes {
         Supplier { BlockInit.UNIVERSE_STARGATE.get() },
         UniverseStargateEntity::class.java,
         Consumer { nbt ->
-            nbt.putString("Symbols", "sgjourney:universal")
-            nbt.putString("PointOfOrigin", "sgjourney:universal")
+            putSymbols(nbt, "sgjourney:universal", "sgjourney:universal")
         },
         BiConsumer { nbt, variant ->
-            nbt.putString("Symbols", "sgjourney:universal")
-            nbt.putString("PointOfOrigin", "sgjourney:universal")
+            putSymbols(nbt, "sgjourney:universal", "sgjourney:universal")
             putVariantAddress(nbt, variant)
         },
     )
 
-    /** Tollan block/entity details used by the dedicated display storyboard. */
     private val TOLLAN = GateType(
         StargateVariant.TOLLAN_STARGATE,
         "var_tollan_display",
@@ -112,13 +103,14 @@ object PonderScenes {
         Supplier { BlockInit.TOLLAN_STARGATE.get() },
         TollanStargateEntity::class.java,
         Consumer { nbt ->
-            nbt.putString("Symbols", "sgjourney:galaxy_milky_way")
-            nbt.putString("PointOfOrigin", "sgjourney:tauri")
+            putSymbols(nbt, "sgjourney:galaxy_milky_way", "sgjourney:tauri")
         },
-        BiConsumer { nbt, variant -> putVariantAddress(nbt, variant) },
+        BiConsumer { nbt, variant ->
+            putSymbols(nbt, "sgjourney:galaxy_milky_way", "sgjourney:tauri")
+            putVariantAddress(nbt, variant)
+        },
     )
 
-    /** Classic block/entity details used by the dedicated display storyboard. */
     private val CLASSIC = GateType(
         StargateVariant.CLASSIC_STARGATE,
         "var_classic_display",
@@ -126,17 +118,15 @@ object PonderScenes {
         Supplier { BlockInit.CLASSIC_STARGATE.get() },
         ClassicStargateEntity::class.java,
         Consumer { nbt ->
-            nbt.putString("Symbols", "sgjourney:galaxy_milky_way")
-            nbt.putString("PointOfOrigin", "sgjourney:tauri")
+            putSymbols(nbt, "sgjourney:galaxy_milky_way", "sgjourney:tauri")
         },
         BiConsumer { nbt, variant ->
-            nbt.putString("Symbols", "sgjourney:terra")
-            nbt.putString("PointOfOrigin", "sgjourney:tauri")
+            putSymbols(nbt, "sgjourney:terra", "sgjourney:tauri")
             putVariantAddress(nbt, variant)
         },
     )
 
-    /** Registers the introduction and five gate-family display storyboards. */
+    /** Registers the introduction followed by one registry-driven display for each gate family. */
     fun register(helper: PonderSceneRegistrationHelper<ResourceLocation>) {
         registerScene(helper) { scene, util -> variantCrystal(scene, util) }
         registerScene(helper) { scene, util -> variantCrystalDisplay(scene, util, MILKY_WAY) }
@@ -146,16 +136,17 @@ object PonderScenes {
         registerScene(helper) { scene, util -> variantCrystalDisplay(scene, util, CLASSIC) }
     }
 
-    /** Returns true only for one of this mod's six registered storyboards. */
-    fun isSgjPonderScene(sceneId: ResourceLocation): Boolean {
-        return sceneId.namespace == SGJPonder.MODID && sceneId.path in SCENE_IDS
+    /** Limits responsive scaling to this mod's six registered storyboards. */
+    internal fun isSgjPonderScene(sceneId: ResourceLocation): Boolean {
+        return sceneId.namespace == SGJPonder.MODID &&
+            (sceneId.path == "var_crystal" || sceneId.path in DISPLAY_SCENE_IDS)
     }
 
-    /** Applies the common item, structure, and tag identifiers to one storyboard. */
     private fun registerScene(
         helper: PonderSceneRegistrationHelper<ResourceLocation>,
         scene: PonderStoryBoard,
     ) {
+        // Every storyboard uses the same structure, item entry, and index tag.
         helper.addStoryBoard(
             SGJPonderPlugin.VARIANT_CRYSTAL_ITEM,
             "gate_pedestal",
@@ -164,7 +155,7 @@ object PonderScenes {
         )
     }
 
-    /** Introduces applying one crystal and demonstrates its gate-family restriction. */
+    /** Introduces variant crystals and cycles through the five compatible gate families. */
     private fun variantCrystal(scene: SceneBuilder, util: SceneBuildingUtil) {
         scene.title("var_crystal", "Variant Crystals")
         scene.configureBasePlate(0, 0, 7)
@@ -206,7 +197,7 @@ object PonderScenes {
         scene.markAsFinished()
     }
 
-    /** Cycles through every registered variant for a single Stargate family. */
+    /** Displays the base gate and every data-pack variant registered for [gateType]. */
     private fun variantCrystalDisplay(scene: SceneBuilder, util: SceneBuildingUtil, gateType: GateType) {
         scene.title(gateType.sceneId, gateType.title)
         scene.configureBasePlate(0, 0, 7)
@@ -224,7 +215,6 @@ object PonderScenes {
         spinDisplayBoard(scene, util)
         baseVariantDisplay(scene, util, gateType)
 
-        // Data-pack variants are discovered at playback time from the active client registry.
         getVariantsForType(gateType.id).forEach { variantName ->
             SGJPonder.LOGGER.info("Adding variant: {} for: {}", variantName, gateType.id)
             variantDisplay(scene, util, gateType, variantName)
@@ -233,7 +223,7 @@ object PonderScenes {
         scene.markAsFinished()
     }
 
-    /** Shows the implicit unmodified gate before the registry-provided variants. */
+    /** Adds the implicit base gate before explicit registry variants are animated. */
     private fun baseVariantDisplay(scene: SceneBuilder, util: SceneBuildingUtil, gateType: GateType) {
         SGJPonder.LOGGER.info("Adding implicit base variant for: {}", gateType.id)
         setDisplayBoardText(
@@ -250,14 +240,14 @@ object PonderScenes {
         scene.idle(40)
     }
 
-    /** Updates the display board and gate NBT for one named registry variant. */
+    /** Updates the board and gate NBT for one registered variant. */
     private fun variantDisplay(
         scene: SceneBuilder,
         util: SceneBuildingUtil,
         gateType: GateType,
         variantName: String,
     ) {
-        val variantId = ResourceLocation(variantName)
+        val variantId = ResourceLocation.parse(variantName)
         setDisplayBoardText(
             scene,
             util,
@@ -278,7 +268,7 @@ object PonderScenes {
         scene.idle(40)
     }
 
-    /** Reads all variants whose declared base Stargate matches [type]. */
+    /** Reads variants from the active client level so data-pack additions appear automatically. */
     private fun getVariantsForType(type: ResourceLocation): List<String> {
         val level = Minecraft.getInstance().level ?: return emptyList()
         val registry = level.registryAccess().registryOrThrow(StargateVariant.REGISTRY_KEY)
@@ -295,7 +285,7 @@ object PonderScenes {
         return variants
     }
 
-    /** Reveals the base plate and pedestal before the Stargate appears. */
+    /** Reveals the structure base and pedestal in two readable animation steps. */
     private fun showBaseAndPedestal(scene: SceneBuilder, util: SceneBuildingUtil) {
         scene.world().showSection(util.select().layer(0), Direction.UP)
         scene.idle(5)
@@ -303,7 +293,7 @@ object PonderScenes {
         scene.idle(10)
     }
 
-    /** Reveals the tall flap display one horizontal layer at a time. */
+    /** Reveals the tall flap-display assembly one layer at a time. */
     private fun showVariantDisplayBoard(scene: SceneBuilder, util: SceneBuildingUtil) {
         for (y in 1..9) {
             scene.world().showSection(util.select().fromTo(6, y, 6, 0, y, 6), Direction.DOWN)
@@ -311,12 +301,12 @@ object PonderScenes {
         }
     }
 
-    /** Reveals the block-entity position occupied by the current Stargate. */
+    /** Reveals the single gate block after the supporting structure is visible. */
     private fun revealGate(scene: SceneBuilder, util: SceneBuildingUtil) {
         scene.world().showSection(util.select().position(util.grid().at(3, 1, 4)), Direction.DOWN)
     }
 
-    /** Replaces the gate block and applies the selected family's NBT mutation. */
+    /** Replaces the gate family and applies its complete block-entity NBT in one scene action. */
     private fun setGate(
         scene: SceneBuilder,
         util: SceneBuildingUtil,
@@ -334,19 +324,19 @@ object PonderScenes {
         )
     }
 
-    /** Assigns kinetic speed to every flap-display block in the two display rows. */
+    /** Starts the kinetic display rows so text changes animate through their flap transitions. */
     private fun spinDisplayBoard(scene: SceneBuilder, util: SceneBuildingUtil) {
         for (x in 0..6) {
             for (y in 8..9) {
                 scene.world().modifyBlockEntity(
                     util.grid().at(x, y, 6),
                     KineticBlockEntity::class.java,
-                ) { display -> display.speed = 192.0f }
+                ) { display -> display.setSpeed(192.0f) }
             }
         }
     }
 
-    /** Writes the gate-family and variant resource IDs across the four display rows. */
+    /** Splits gate and variant resource IDs across the display board's four rows. */
     private fun setDisplayBoardText(
         scene: SceneBuilder,
         util: SceneBuildingUtil,
@@ -360,23 +350,31 @@ object PonderScenes {
             display,
             FlapDisplayBlockEntity::class.java,
         ) { board ->
-            board.applyTextManually(0, componentJson(typeNamespace))
-            board.applyTextManually(1, componentJson(typePath))
-            board.applyTextManually(2, componentJson(variantNamespace))
-            board.applyTextManually(3, componentJson(variantPath))
+            board.applyTextManually(0, Component.literal(typeNamespace))
+            board.applyTextManually(1, Component.literal(typePath))
+            board.applyTextManually(2, Component.literal(variantNamespace))
+            board.applyTextManually(3, Component.literal(variantPath))
         }
     }
 
-    /** Serializes literal display text in the JSON form required by Ponder 1.20.1. */
-    private fun componentJson(text: String): String = Component.Serializer.toJson(Component.literal(text))
-
-    /** Writes the shared variant and demonstration address fields into gate NBT. */
+    /** Writes the selected variant and deterministic demonstration address. */
     private fun putVariantAddress(nbt: CompoundTag, variant: String) {
-        nbt.putString("Variant", variant)
-        nbt.putIntArray("Address", DEMO_ADDRESS)
+        nbt.putString(AbstractStargateEntity.VARIANT, variant)
+        nbt.putIntArray(AbstractStargateEntity.ADDRESS, DEMO_ADDRESS)
     }
 
-    /** All family-specific data and NBT writers required by the shared storyboard logic. */
+    /** Writes the symbol set and point of origin expected by SGJourney's gate entity. */
+    private fun putSymbols(nbt: CompoundTag, symbols: String, pointOfOrigin: String) {
+        nbt.putString(AbstractStargateEntity.SYMBOLS, symbols)
+        nbt.putString(AbstractStargateEntity.POINT_OF_ORIGIN, pointOfOrigin)
+    }
+
+    /** Controls Pegasus dynamic symbols using SGJourney's intentionally misspelled NBT key. */
+    private fun putDynamicSymbols(nbt: CompoundTag, dynamicSymbols: Boolean) {
+        nbt.putBoolean(PegasusStargateEntity.DYNAMC_SYMBOLS, dynamicSymbols)
+    }
+
+    /** Family-specific inputs consumed by the shared registry-variant storyboard. */
     private data class GateType(
         val id: ResourceLocation,
         val sceneId: String,
