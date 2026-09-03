@@ -12,7 +12,7 @@ import net.povstalec.sgjourney.common.sgjourney.StargateVariant
 
 /** Registers SGJ Ponder's in-game registry diagnostic command. */
 object ClientCommands {
-    /** Attaches `/sgjponder_getvars` to Forge's command dispatcher. */
+    /** Attaches `/sgjponder_getvars` to NeoForge's command dispatcher. */
     fun register(dispatcher: CommandDispatcher<CommandSourceStack>) {
         dispatcher.register(Commands.literal("sgjponder_getvars").executes(ClientCommands::execute))
     }

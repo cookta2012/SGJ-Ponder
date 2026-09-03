@@ -1,211 +1,164 @@
-buildscript {
-    repositories {
-        mavenCentral()
-        gradlePluginPortal()
-        maven { url = 'https://maven.minecraftforge.net/' }
-        maven { url = 'https://maven.parchmentmc.org' }
-    }
-    dependencies {
-        classpath 'net.minecraftforge.gradle:ForgeGradle:6.0.39'
-        classpath 'org.parchmentmc:librarian:1.2.0'
-    }
-}
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile
 
 plugins {
+    id 'java-library'
     id 'idea'
     id 'maven-publish'
-    id 'org.jetbrains.kotlin.jvm' version '2.0.0'
+    id 'net.neoforged.gradle.userdev' version '7.1.36'
+    id 'org.jetbrains.kotlin.jvm' version '2.2.20'
 }
-
-apply plugin: 'net.minecraftforge.gradle'
-apply plugin: 'org.parchmentmc.librarian.forgegradle'
 
 // Include the Minecraft target in artifacts and Maven coordinates while keeping
 // the loader-facing mod version independent in the expanded metadata.
-version = "${mod_version}-${minecraft_version}"
+version = "${mod_version}-NEOFORGE-${minecraft_version}"
 group = mod_group_id
 
 base {
     archivesName = mod_id
 }
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(17)
-kotlin.jvmToolchain(17)
-
-println("Java: ${System.getProperty('java.version')}, JVM: ${System.getProperty('java.vm.version')} (${System.getProperty('java.vendor')}), Arch: ${System.getProperty('os.arch')}")
-minecraft {
-    // Change to your preferred mappings
-    mappings channel: mapping_channel, version: mapping_version
-    // Add your AccessTransformer
-    // accessTransformer = file('src/main/resources/META-INF/accesstransformer.cfg')
-
-    runs {
-        // REQUIRED for processResources to work in dev
-        copyIdeResources = true
-
-        client {
-            workingDirectory project.file('run')
-
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            property 'forge.enabledGameTestNamespaces', mod_id
-            property 'mixin.env.remapRefMap', 'true'
-            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
-
-            mods {
-                "$mod_id" {
-                    source sourceSets.main
-                }
-            }
-        }
-
-        server {
-            workingDirectory project.file('run/server')
-
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            property 'forge.enabledGameTestNamespaces', mod_id
-
-            mods {
-                "$mod_id" {
-                    source sourceSets.main
-                }
-            }
-        }
-
-        gameTestServer {
-            workingDirectory project.file('run/server')
-
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-            property 'forge.enabledGameTestNamespaces', mod_id
-
-            mods {
-                "$mod_id" {
-                    source sourceSets.main
-                }
-            }
-        }
-
-        data {
-            workingDirectory project.file('run')
-
-            property 'forge.logging.markers', 'REGISTRIES'
-            property 'forge.logging.console.level', 'debug'
-
-            args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources')
-
-            mods {
-                "$mod_id" {
-                    source sourceSets.main
-                }
-            }
-        }
-    }
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
-// Include assets and data from data generators
-sourceSets.main.resources { srcDirs 'src/generated/resources/' }
+kotlin {
+    jvmToolchain(21)
+}
+
+println("Java: ${System.getProperty('java.version')}, JVM: ${System.getProperty('java.vm.version')} (${System.getProperty('java.vendor')}), Arch: ${System.getProperty('os.arch')}")
+
+sourceSets.main.resources {
+    srcDir 'src/generated/resources'
+}
 
 repositories {
     maven {
         name = 'Kotlin for Forge'
         url = 'https://thedarkcolour.github.io/KotlinForForge/'
-        content { includeGroup "thedarkcolour" }
+        content { includeGroup 'thedarkcolour' }
     }
-    maven { url = 'https://raw.githubusercontent.com/Fuzss/modresources/main/maven/' }
     maven { url = 'https://maven.createmod.net' }
-    maven { url = 'https://modmaven.dev/' }
+    maven { url = 'https://maven.ithundxr.dev/snapshots' }
     maven { url = 'https://maven.ithundxr.dev/mirror' }
-    maven { url = 'https://maven.minecraftforge.net/' }
-    maven { url = 'https://maven.parchmentmc.org' }
     maven {
         url = 'https://cursemaven.com'
         content {
             includeGroup 'curse.maven'
         }
     }
-    maven {
-        name = 'tterrag maven'
-        url = 'https://maven.tterrag.com/'
+}
+
+runs {
+    configureEach {
+        systemProperty 'forge.logging.markers', 'REGISTRIES'
+        systemProperty 'forge.logging.console.level', 'debug'
+        workingDirectory project.layout.projectDirectory.dir('run').dir(name)
+        modSource project.sourceSets.main
+    }
+
+    client {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+    }
+
+    server {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+        argument '--nogui'
+    }
+
+    gameTestServer {
+        systemProperty 'neoforge.enabledGameTestNamespaces', project.mod_id
+    }
+
+    data {
+        arguments.addAll '--mod', project.mod_id, '--all',
+            '--output', file('src/generated/resources/').getAbsolutePath(),
+            '--existing', file('src/main/resources/').getAbsolutePath()
     }
 }
 
 dependencies {
-    // Use the latest version of Minecraft Forge
-    minecraft "net.minecraftforge:forge:$minecraft_version-$forge_version"
+    implementation "net.neoforged:neoforge:${neo_version}"
+    implementation "thedarkcolour:kotlinforforge-neoforge:${kff_version}"
 
-    implementation "thedarkcolour:kotlinforforge:$kff_version"
-
-    implementation fg.deobf("curse.maven:sgjourney-${sgjourney_curse_project}:${sgjourney_curse_file}")
-    implementation(fg.deobf("com.simibubi.create:create-${minecraft_version}:${create_forge_version}:slim")) {
+    implementation "curse.maven:sgjourney-${sgjourney_curse_project}:${sgjourney_curse_file}"
+    implementation("com.simibubi.create:create-${minecraft_version}:${create_version}:slim") {
         transitive = false
     }
-    implementation fg.deobf("net.createmod.ponder:Ponder-Forge-${minecraft_version}:${ponder_version}")
-    implementation fg.deobf("com.tterrag.registrate:Registrate:${registrate_forge_version}")
-    runtimeOnly fg.deobf("dev.engine-room.flywheel:flywheel-forge-${minecraft_version}:${flywheel_version}")
-    compileOnly "io.github.llamalad7:mixinextras-common:${mixin_extras_version}"
-    annotationProcessor "io.github.llamalad7:mixinextras-common:${mixin_extras_version}"
-    implementation "io.github.llamalad7:mixinextras-forge:${mixin_extras_version}"
+    implementation "net.createmod.ponder:ponder-neoforge:${ponder_version}+mc${minecraft_version}"
+    implementation "com.tterrag.registrate:Registrate:${registrate_version}"
+    compileOnly "dev.engine-room.flywheel:flywheel-neoforge-api-${minecraft_version}:${flywheel_version}"
+    runtimeOnly "dev.engine-room.flywheel:flywheel-neoforge-${minecraft_version}:${flywheel_version}"
 }
 
-// This block of code expands all declared replace properties in the specified resource targets.
-// A missing property will result in an error. Properties are expanded using ${} Groovy notation.
-// When "copyIdeResources" is enabled, this will also run before the game launches in IDE environments.
-// See https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html
-def resourceTargets = ['META-INF/mods.toml', 'pack.mcmeta']
+def resourceTargets = ['META-INF/neoforge.mods.toml', 'pack.mcmeta']
 def replaceProperties = [
-        minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
-        forge_version: forge_version, forge_version_range: forge_version_range,
-        sgjourney_version_range: sgjourney_version_range,
-        create_forge_version_range: create_forge_version_range,
-        ponder_version_range: ponder_version_range,
-        mod_id: mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
-        mod_authors: mod_authors, mod_description: mod_description
+    minecraft_version: minecraft_version,
+    minecraft_version_range: minecraft_version_range,
+    neo_version: neo_version,
+    neo_version_range: neo_version_range,
+    loader_version_range: loader_version_range,
+    sgjourney_version_range: sgjourney_version_range,
+    create_version_range: create_version_range,
+    ponder_version_range: ponder_version_range,
+    mod_id: mod_id,
+    mod_name: mod_name,
+    mod_license: mod_license,
+    mod_version: mod_version,
+    mod_authors: mod_authors,
+    mod_description: mod_description
 ]
-processResources {
+
+tasks.withType(ProcessResources).configureEach {
     inputs.properties replaceProperties
-    replaceProperties.put 'project', project
 
     filesMatching(resourceTargets) {
         expand replaceProperties
     }
 }
 
-tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile).configureEach {
-    compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+tasks.withType(KotlinJvmCompile).configureEach {
+    compilerOptions.jvmTarget.set(JvmTarget.JVM_21)
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
 }
 
 jar {
-    archiveBaseName.set("SGJ_Ponder")
+    archiveBaseName.set('SGJ_Ponder')
     manifest {
         attributes([
-                'Specification-Title'     : mod_id,
-                'Specification-Vendor'    : mod_authors,
-                'Specification-Version'   : "1", // We are version 1 of ourselves
-                'Implementation-Title'    : project.name,
-                'Implementation-Version'  : project.jar.archiveVersion,
-                'Implementation-Vendor'   : mod_authors,
-                'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+            'Specification-Title': mod_id,
+            'Specification-Vendor': mod_authors,
+            'Specification-Version': '1',
+            'Implementation-Title': project.name,
+            'Implementation-Version': project.jar.archiveVersion,
+            'Implementation-Vendor': mod_authors,
+            'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
         ])
     }
 }
 
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8' // Use the UTF-8 charset for Java compilation
-}
-
-// The below is only required if using 'maven-publish' and you want to publish to maven or use JitPack
-jar.finalizedBy('reobfJar')
 publishing {
     publications {
-        mavenJava(MavenPublication) {
-            artifact jar
+        register('mavenJava', MavenPublication) {
+            from components.java
         }
     }
     repositories {
         maven {
             url "file://${project.projectDir}/mcmodsrepo"
         }
+    }
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
     }
 }
