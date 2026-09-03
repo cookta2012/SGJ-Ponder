@@ -52,24 +52,36 @@ jobs:
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: SGJ-Ponder Build
-        path: build/reobfJar/output.jar
+        name: SGJ_Ponder-1.0.2-1.20.1
+        path: build/libs/SGJ_Ponder-1.0.2-1.20.1.jar
 
-  dependency-submission:
-
+  release:
+    # Only a completed change entering main may publish. Pull requests still run
+    # the build job, but never receive a write-capable token.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
+    - name: Download release artifact
+      uses: actions/download-artifact@v4
       with:
-        java-version: '17'
-        distribution: 'temurin'
+        name: SGJ_Ponder-1.0.2-1.20.1
+        path: release
 
-    # Generates and submits a dependency graph, enabling Dependabot Alerts for all project dependencies.
-    # See: https://github.com/gradle/actions/blob/main/dependency-submission/README.md
-    - name: Generate and submit dependency graph
-      uses: gradle/actions/dependency-submission@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
+    - name: Publish GitHub release
+      env:
+        GH_TOKEN: ${{ github.token }}
+        RELEASE_TAG: v1.0.2-1.20.1
+        RELEASE_JAR: release/SGJ_Ponder-1.0.2-1.20.1.jar
+      run: |
+        if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+          gh release upload "$RELEASE_TAG" "$RELEASE_JAR" --clobber
+        else
+          gh release create "$RELEASE_TAG" "$RELEASE_JAR" \
+            --target "$GITHUB_SHA" \
+            --title "$RELEASE_TAG" \
+            --generate-notes
+        fi
